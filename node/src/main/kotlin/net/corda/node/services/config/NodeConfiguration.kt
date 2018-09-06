@@ -9,7 +9,10 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
+import net.corda.cryptoservice.CryptoService
 import net.corda.node.services.config.rpc.NodeRpcOptions
+import net.corda.node.services.keys.cryptoServices.BCCryptoService
+import net.corda.node.services.keys.cryptoServices.SupportedCryptoServices
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -81,6 +84,11 @@ interface NodeConfiguration {
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
+    // TODO At the moment this is just an identifier for the desired CryptoService engine. Consider using a classname to
+    //      to allow for pluggable implementations.
+    val cryptoServiceName: SupportedCryptoServices?
+    val cryptoServiceConf: String? // Location for the cryptoService conf file.
+
     fun validate(): List<String>
 
     companion object {
@@ -98,6 +106,14 @@ interface NodeConfiguration {
         const val cordappDirectoriesKey = "cordappDirectories"
 
         val defaultJmxReporterType = JmxReporterType.JOLOKIA
+    }
+
+    // TODO remove this when we use classname instead of cryptoServiceName enum.
+    fun makeCryptoService(): CryptoService {
+        return when(cryptoServiceName) {
+            SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this)
+            null -> BCCryptoService(this) // Pick default BC CryptoService when null.
+        }
     }
 }
 
@@ -219,11 +235,13 @@ data class NodeConfigurationImpl(
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
         override val flowOverrides: FlowOverrideConfig?,
-        override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
+        override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() },
+        override val cryptoServiceName: SupportedCryptoServices? = null,
+        override val cryptoServiceConf: String? = null
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
-
+        // private val supportedCryptoServiceNames = setOf("BC", "UTIMACO", "GEMALTO-LUNA", "AZURE-KEY-VAULT")
     }
 
     private val actualRpcSettings: NodeRpcSettings
@@ -276,6 +294,17 @@ data class NodeConfigurationImpl(
         return errors
     }
 
+    private fun validateCryptoService(): List<String> {
+        val errors = mutableListOf<String>()
+        if (cryptoServiceName != null) {
+            errors += "cryptoServiceName $cryptoServiceName is not supported"
+        }
+        if (cryptoServiceName == null && cryptoServiceConf != null) {
+            errors += "cryptoServiceName is null, but cryptoServiceConf is set to $cryptoServiceConf"
+        }
+        return errors
+    }
+
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
         errors += validateDevModeOptions()
@@ -288,6 +317,7 @@ data class NodeConfigurationImpl(
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
+        errors += validateCryptoService()
         return errors
     }
 
