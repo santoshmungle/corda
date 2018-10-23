@@ -2,6 +2,7 @@ package net.corda.serialization.internal.model
 
 import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.SerializableCalculatedProperty
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.serialization.internal.AllWhitelist
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -115,6 +116,11 @@ class TypeModelTests {
              b: String
              c: String
         """)
+    }
+
+    @Test
+    fun `opaqueBytes is weird for some reason`() {
+        println(model.inspect(OpaqueBytes::class.java))
     }
 
     private inline fun <reified T> assertInformation(expected: String) {

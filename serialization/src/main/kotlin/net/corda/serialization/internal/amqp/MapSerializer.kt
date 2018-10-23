@@ -22,7 +22,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = (declaredType as? ParameterizedType)
             ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
-                    .toParameterized(TypeIdentifier.Unknown, TypeIdentifier.Unknown)
+                    .toParameterized(TypeIdentifier.Top, TypeIdentifier.Top)
                     .getLocalType(factory.classloader) // replace erased type parameters
 
     override val typeDescriptor: Symbol = Symbol.valueOf(

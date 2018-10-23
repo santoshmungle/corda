@@ -7,6 +7,7 @@ import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.isPrimitive
+import net.corda.serialization.internal.model.TypeIdentifier
 import java.lang.reflect.*
 import java.util.*
 
@@ -53,10 +54,17 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
 
     private val typesSeen: MutableSet<Type> = mutableSetOf()
     private var currentContext: Type? = null
+
+    private val buffer = StringBuilder()
     private var hasher: Hasher = newDefaultHasher()
 
     // Fingerprint the type recursively, and return the encoded fingerprint written into the hasher.
-    fun fingerprint(type: Type): String = fingerprintType(type).hasher.fingerprint
+    fun fingerprint(type: Type): String {
+        val result = fingerprintType(type).hasher.fingerprint
+        println(buffer.toString())
+        println("===")
+        return result
+    }
 
     // This method concatenates various elements of the types recursively as unencoded strings into the hasher,
     // effectively creating a unique string for a type which we then hash in the calling function above.
@@ -149,6 +157,7 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
 
     // Write the given character sequence into the hasher.
     private fun append(chars: CharSequence) {
+        buffer.append(chars)
         hasher = hasher.putUnencodedChars(chars)
     }
 

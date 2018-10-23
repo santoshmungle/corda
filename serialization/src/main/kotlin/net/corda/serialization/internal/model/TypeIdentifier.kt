@@ -5,6 +5,7 @@ import net.corda.serialization.internal.amqp.asClass
 import java.io.NotSerializableException
 import java.lang.IllegalArgumentException
 import java.lang.reflect.*
+import java.util.*
 
 /**
  * Thrown if a [TypeIdentifier] is incompatible with the local [Type] to which it refers,
@@ -120,6 +121,7 @@ sealed class TypeIdentifier {
      * Identifies a class with no type parameters.
      */
     data class Unparameterised(override val name: String) : TypeIdentifier() {
+
         companion object {
             private val primitives = listOf(
                     Byte::class,
@@ -164,11 +166,12 @@ sealed class TypeIdentifier {
         override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass(name)
     }
 
-    // We don't implement equals on reconstituted types, because we cannot guarantee to implement hashCode compatibly
-    // with the Java native implementation of our interface, and so cannot uphold the equals/hashCode contract.
     private class ReconstitutedGenericArrayType(private val componentType: Type) : GenericArrayType {
         override fun getGenericComponentType(): Type = componentType
         override fun toString() = "$componentType[]"
+        override fun equals(other: Any?): Boolean =
+                other is GenericArrayType && componentType == other.genericComponentType
+        override fun hashCode(): Int = Objects.hashCode(componentType)
     }
 
     /**
@@ -188,8 +191,6 @@ sealed class TypeIdentifier {
         }
     }
 
-    // We don't implement equals on reconstituted types, because we cannot guarantee to implement hashCode compatibly
-    // with the Java native implementation of our interface, and so cannot uphold the equals/hashCode contract.
     private class ReconstitutedParameterizedType(
             private val _rawType: Type,
             private val _actualTypeArguments: Array<Type>) : ParameterizedType {
@@ -197,6 +198,14 @@ sealed class TypeIdentifier {
         override fun getOwnerType(): Type? = null
         override fun getActualTypeArguments(): Array<Type> = _actualTypeArguments
         override fun toString(): String = TypeIdentifier.forGenericType(this).prettyPrint(false)
+        override fun equals(other: Any?): Boolean =
+                other is ParameterizedType &&
+                        other.rawType == rawType &&
+                        other.ownerType == null &&
+                        Arrays.equals(other.actualTypeArguments, actualTypeArguments)
+        override fun hashCode(): Int =
+                Arrays.hashCode(actualTypeArguments) xor Objects.hashCode(ownerType) xor Objects.hashCode(rawType)
+
     }
 
     /**

@@ -361,10 +361,6 @@ open class SerializerFactory(
             return primitiveTypeNames[Primitives.unwrap(clazz)]
         }
 
-        fun primitiveType(type: String): Class<*>? {
-            return namesOfPrimitiveTypes[type]
-        }
-
         private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
                 Character::class.java to "char",
                 Char::class.java to "char",
@@ -387,8 +383,6 @@ open class SerializerFactory(
                 ByteArray::class.java to "binary",
                 String::class.java to "string",
                 Symbol::class.java to "symbol")
-
-        private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
 
         fun nameForType(type: Type): String = when (type) {
             is Class<*> -> {
