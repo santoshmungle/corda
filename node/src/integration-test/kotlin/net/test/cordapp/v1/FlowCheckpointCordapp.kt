@@ -16,7 +16,7 @@ import net.corda.testMessage.MessageState
 
 @StartableByRPC
 @InitiatingFlow
-class SendMessageFlow(private val message: Message, private val notary: Party, private val reciepent: Party? = null) : FlowLogic<SignedTransaction>() {
+class SendMessageFlow(private val message: Message, private val notary: Party, private val recipient: Party? = null) : FlowLogic<SignedTransaction>() {
     companion object {
         object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
         object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
@@ -46,10 +46,10 @@ class SendMessageFlow(private val message: Message, private val notary: Party, p
 
         progressTracker.currentStep = FINALISING_TRANSACTION
 
-        return if (reciepent != null) {
-            val session = initiateFlow(reciepent)
+        return if (recipient != null) {
+            val session = initiateFlow(recipient)
             subFlow(SendTransactionFlow(session, signedTx))
-            subFlow(FinalityFlow(signedTx, setOf(reciepent), FINALISING_TRANSACTION.childProgressTracker()))
+            subFlow(FinalityFlow(signedTx, setOf(recipient), FINALISING_TRANSACTION.childProgressTracker()))
         } else {
             subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
         }

@@ -1,6 +1,9 @@
 package net.corda.testing.driver
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.concurrent.fork
@@ -162,7 +165,6 @@ class DriverTests {
         }
     }
 
-
     @Test
     fun `driver waits for in-process nodes to finish`() {
         fun NodeHandle.stopQuietly() = try {
@@ -188,5 +190,25 @@ class DriverTests {
         testFuture.getOrThrow()
     }
 
+    @Test
+    fun `by default, the calling package is included`() {
+        driver {
+            assertThat(defaultNotaryNode.getOrThrow().rpc.registeredFlows()).contains(TestRpcFlow::class.java.name)
+        }
+    }
+
+    @Test
+    fun `calling package is not included when using cordappsForAllNodes`() {
+        driver(DriverParameters(cordappsForAllNodes = emptyList())) {
+            assertThat(defaultNotaryNode.getOrThrow().rpc.registeredFlows()).doesNotContain(TestRpcFlow::class.java.name)
+        }
+    }
+
     private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
+
+    @StartableByRPC
+    class TestRpcFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() = Unit
+    }
 }
