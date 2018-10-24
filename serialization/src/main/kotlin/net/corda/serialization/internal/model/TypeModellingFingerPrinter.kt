@@ -3,6 +3,7 @@ package net.corda.serialization.internal.model
 import com.google.common.hash.Hashing
 import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.FingerPrinter
 import net.corda.serialization.internal.amqp.SerializerFactory
@@ -11,6 +12,16 @@ import net.corda.serialization.internal.amqp.ifThrowsAppend
 import org.apache.qpid.proton.amqp.*
 import java.lang.reflect.*
 import java.util.*
+
+
+typealias Fingerprint = String
+
+/**
+ *
+ */
+interface CustomTypeDescriptorLookup {
+    fun getCustomTypeDescriptor(type: Type): String?
+}
 
 /**
  * Obtains the custom type descriptor for any type that has a custom serializer, according to the [SerializerFactory].
@@ -37,7 +48,7 @@ internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): TypeMode
     fun isOpaque(type: Type) = Primitives.unwrap(type.asClass()) in opaqueTypes ||
             customTypeDescriptorLookup.getCustomTypeDescriptor(type) != null
 
-    val typeModel = LocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, ::isOpaque))
+    val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, ::isOpaque))
     val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customTypeDescriptorLookup)
 
     return TypeModellingFingerPrinter(typeModel, localTypeInformationFingerPrinter)
@@ -73,21 +84,41 @@ class TypeModellingFingerPrinter(private val typeModel: LocalTypeModel,
             }
 }
 
+/**
+ * A fingerprinter that fingerprints [LocalTypeInformation], rather than a [Type] directly.
+ */
 interface LocalTypeInformationFingerPrinter {
+    /**
+     * Traverse the provided [LocalTypeInformation] graph and emit a short fingerprint string uniquely representing
+     * the shape of that graph.
+     *
+     * @param typeInformation The [LocalTypeInformation] to fingerprint.
+     */
     fun fingerprint(typeInformation: LocalTypeInformation): String
 }
 
-data class CustomisableLocalTypeInformationFingerPrinter(
-        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup) : LocalTypeInformationFingerPrinter {
+/**
+ * A [LocalTypeInformationFingerPrinter] that consults a [CustomTypeDescriptorLookup] to obtain type descriptors for
+ * types that do not need to be traversed to calculate their fingerprint information. (Usually these will be the type
+ * descriptors supplied by custom serializers).
+ *
+ * @param customTypeDescriptorLookup The [CustomTypeDescriptorLookup] to use to obtain custom type descriptors for
+ * selected types.
+ */
+class CustomisableLocalTypeInformationFingerPrinter(
+        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val debugEnabled: Boolean = false) : LocalTypeInformationFingerPrinter {
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
-            CustomisableLocalTypeInformationFingerPrintingState(customTypeDescriptorLookup).fingerprint(typeInformation)
+            CustomisableLocalTypeInformationFingerPrintingState(
+                    customTypeDescriptorLookup,
+                    FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
 }
 
 /**
  * Wrapper for the [Hasher] we use to generate fingerprints, providing methods for writing various kinds of content
  * into the hash.
  */
-internal class FingerprintWriter {
+internal class FingerprintWriter(private val debugEnabled: Boolean) {
 
     companion object {
         private const val ARRAY_HASH: String = "Array = true"
@@ -97,9 +128,12 @@ internal class FingerprintWriter {
         private const val NOT_NULLABLE_HASH: String = "Nullable = false"
         private const val ANY_TYPE_HASH: String = "Any type = true"
 
-        val ANY = FingerprintWriter().writeAny().fingerprint
+        val ANY = FingerprintWriter(false).writeAny().fingerprint
+
+        private val logger = contextLogger()
     }
 
+    private val debugBuffer: StringBuilder? = if (debugEnabled) StringBuilder() else null
     private var hasher = Hashing.murmur3_128().newHasher()
 
     fun write(chars: CharSequence) = append(chars)
@@ -112,16 +146,23 @@ internal class FingerprintWriter {
     fun writeAny() = append(ANY_TYPE_HASH)
 
     private fun append(chars: CharSequence) = apply {
+        debugBuffer?.append(chars)
         hasher = hasher.putUnencodedChars(chars)
     }
 
-    val fingerprint: String get() = hasher.hash().asBytes().toBase64()
+    val fingerprint: String get() {
+        if (debugBuffer != null) logger.info(debugBuffer.toString())
+        return hasher.hash().asBytes().toBase64()
+    }
 }
 
 /**
- * Representation of the current state of fingerprinting.
+ * Representation of the current state of fingerprinting, which keeps track of which types have already been visited
+ * during fingerprinting.
  */
-private class CustomisableLocalTypeInformationFingerPrintingState(private val customTypeDescriptorLookup: CustomTypeDescriptorLookup) {
+private class CustomisableLocalTypeInformationFingerPrintingState(
+        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val writer: FingerprintWriter) {
 
     companion object {
         private var CHARACTER_TYPE = LocalTypeInformation.APrimitive(
@@ -130,7 +171,6 @@ private class CustomisableLocalTypeInformationFingerPrintingState(private val cu
     }
 
     private val typesSeen: MutableSet<TypeIdentifier> = mutableSetOf()
-    private val writer = FingerprintWriter()
 
     /**
      * Fingerprint the type recursively, and return the encoded fingerprint written into the hasher.
@@ -257,7 +297,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(private val cu
 
 // region Utility functions
 internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
-        FingerprintWriter().write(typeDescriptors.joinToString()).fingerprint
+        FingerprintWriter(false).write(typeDescriptors.joinToString()).fingerprint
 // endregion
 
 // Copied from SerializerFactory so that we can have equivalent behaviour, for now.

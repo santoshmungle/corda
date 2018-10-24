@@ -12,7 +12,7 @@ import java.util.*
 
 class TypeModelTests {
 
-    private val model = LocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+    private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
 
     interface CollectionHolder<K, V> {
         val list: List<V>
