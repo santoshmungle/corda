@@ -19,7 +19,7 @@ import kotlin.collections.LinkedHashSet
 class CollectionSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = (declaredType as? ParameterizedType)
             ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
-                    .toParameterized(TypeIdentifier.Top)
+                    .toParameterized(TypeIdentifier.TopType)
                     .getLocalType(factory.classloader) // replace erased type parameters
 
     override val typeDescriptor: Symbol by lazy {
@@ -63,7 +63,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Collection<*>>): ParameterizedType =
                 (declaredType as? ParameterizedType)
                         ?: TypeIdentifier.Erased(collectionClass.name, 1)
-                                .toParameterized(TypeIdentifier.Top)
+                                .toParameterized(TypeIdentifier.TopType)
                                 .getLocalType(
                                 collectionClass.classLoader ?:
                                 TypeIdentifier::class.java.classLoader) as ParameterizedType
