@@ -49,7 +49,7 @@ buildscript {
     ext.rxjava_version = '1.3.8'
     ext.dokka_version = '0.9.17'
     ext.eddsa_version = '0.2.0'
-    ext.dependency_checker_version = '3.1.0'
+    ext.dependency_checker_version = '3.3.2'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
     ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
@@ -70,7 +70,7 @@ buildscript {
     ext.snappy_version = '0.4'
     ext.class_graph_version = '4.2.12'
     ext.jcabi_manifests_version = '1.1'
-    ext.picocli_version = '3.5.2'
+    ext.picocli_version = '3.6.1'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'

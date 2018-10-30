@@ -59,7 +59,6 @@ class InteractiveShellTest {
         assertEquals(expected, output!!, input)
     }
 
-    @Ignore("Flickers constantly")
     @Test
     fun flowStartSimple() {
         check("a: Hi there", "Hi there")
