@@ -7,6 +7,7 @@ import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.keys.cryptoServices.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.DummyKeysAndCerts
@@ -79,9 +80,12 @@ open class NetworkRegistrationHelper(
      */
     fun generateKeysAndRegister() {
         certificatesDirectory.createDirectories()
-        // In case CryptoService and CertificateStore share the same KeyStore (for backwards compatibility) we use
-        // the SELF_SIGNED_PRIVATE_KEY as progress indicator.
-        if (certificateStore.contains(keyAlias) && !certificateStore.contains(SELF_SIGNED_PRIVATE_KEY)) {
+        // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
+        // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
+        val certStore : CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+
+        // SELF_SIGNED_PRIVATE_KEY is used as progress indicator.
+        if (certStore.contains(keyAlias) && !certStore.contains(SELF_SIGNED_PRIVATE_KEY)) {
             println("Certificate already exists, Corda node will now terminate...")
             return
         }
@@ -91,7 +95,7 @@ open class NetworkRegistrationHelper(
         // We use this as progress indicator so we just store a dummy key and cert.
         // When registration succeeds, this entry should be deleted.
 
-        certificateStore.query { setPrivateKey(SELF_SIGNED_PRIVATE_KEY, AliasPrivateKey(SELF_SIGNED_PRIVATE_KEY), listOf(DummyKeysAndCerts.DUMMY_ECDSAR1_CERT), certificateStore.entryPassword) }
+        certStore.query { setPrivateKey(SELF_SIGNED_PRIVATE_KEY, AliasPrivateKey(SELF_SIGNED_PRIVATE_KEY), listOf(DummyKeysAndCerts.DUMMY_ECDSAR1_CERT), certificateStore.entryPassword) }
 
         val publicKey = loadOrGenerateKeyPair()
 
@@ -100,9 +104,9 @@ open class NetworkRegistrationHelper(
         val certificates = pollServerForCertificates(requestId)
         validateCertificates(publicKey, certificates)
 
-        certificateStore.setCertPathOnly(keyAlias, certificates)
-        certificateStore.value.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
-        certificateStore.value.save()
+        certStore.setCertPathOnly(keyAlias, certificates)
+        certStore.value.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
+        certStore.value.save()
         println("Private key '$keyAlias' and its certificate-chain stored successfully.")
 
         onSuccess(publicKey, cryptoService.getSigner(keyAlias), certificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
