@@ -9,8 +9,9 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.AliasPrivateKey
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
@@ -56,8 +57,8 @@ import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.*
-import net.corda.core.crypto.AliasPrivateKey
+import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.keys.cryptoServices.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
@@ -92,7 +93,6 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
-import java.lang.UnsupportedOperationException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 import java.security.KeyPair
