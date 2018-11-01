@@ -9,6 +9,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.OpenOption
 import java.nio.file.Path
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
 interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
@@ -79,8 +80,13 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
     }
 
     fun setCertPathOnly(alias: String, certificates: List<X509Certificate>) {
-        // In case CryptoService and CertificateStore share the same KeyStore, extract and store the key again.
-        val privateKey = if (this.contains(alias)) {
+        // In case CryptoService and CertificateStore share the same KeyStore (i.e., when BCCryptoService is used),
+        // extract the existing key from the Keystore and store it again along with the new certificate chain.
+        // This is because KeyStores do not support updateKeyEntry and thus we cannot update the certificate chain
+        // without overriding the key entry.
+        // Note that if the given alias already exists, the keystore information associated with it
+        // is overridden by the given key (and associated certificate chain).
+        val privateKey: PrivateKey = if (this.contains(alias)) {
             this.value.getPrivateKey(alias, entryPassword)
         } else {
             AliasPrivateKey(alias)

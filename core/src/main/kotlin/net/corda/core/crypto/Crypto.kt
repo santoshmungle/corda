@@ -474,7 +474,10 @@ object Crypto {
         val sigKey: SignatureScheme = Crypto.findSignatureScheme(keyPair.private)
         val sigMetaData: SignatureScheme = Crypto.findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
         // Special handling if the advertised SignatureScheme is CompositeKey.
-        // TODO fix notaries that advertise [CompositeKey] in their signature Metadata.
+        // TODO fix notaries that advertise [CompositeKey] in their signature Metadata. Currently, clustered notary nodes
+        //      mention Crypto.COMPOSITE_KEY in their SignatureMetadata, but they are actually signing with a leaf-key
+        //      (and if they refer to it as a Composite key, then we lose info about the actual type of their signing key).
+        //      In short, their metadata should be the leaf key-type, until we support CompositeKey signatures.
         require(sigKey == sigMetaData || sigMetaData == Crypto.COMPOSITE_KEY) {
             "Metadata schemeCodeName: ${sigMetaData.schemeCodeName} is not aligned with the key type: ${sigKey.schemeCodeName}."
         }

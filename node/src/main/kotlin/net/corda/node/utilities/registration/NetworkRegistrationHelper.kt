@@ -7,7 +7,7 @@ import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.keys.cryptoServices.BCCryptoService
+import net.corda.node.services.keys.cryptoservices.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.DummyKeysAndCerts
@@ -92,9 +92,8 @@ open class NetworkRegistrationHelper(
 
         val tlsCrlIssuerCert = getTlsCrlIssuerCert()
 
-        // We use this as progress indicator so we just store a dummy key and cert.
+        // We use SELF_SIGNED_PRIVATE_KEY as progress indicator so we just store a dummy key and cert.
         // When registration succeeds, this entry should be deleted.
-
         certStore.query { setPrivateKey(SELF_SIGNED_PRIVATE_KEY, AliasPrivateKey(SELF_SIGNED_PRIVATE_KEY), listOf(DummyKeysAndCerts.DUMMY_ECDSAR1_CERT), certificateStore.entryPassword) }
 
         val publicKey = loadOrGenerateKeyPair()

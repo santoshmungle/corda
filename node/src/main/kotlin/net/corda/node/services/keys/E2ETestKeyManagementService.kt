@@ -7,7 +7,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.cryptoservice.CryptoService
 import net.corda.core.crypto.AliasPrivateKey
-import net.corda.node.services.keys.cryptoServices.BCCryptoService
+import net.corda.node.services.keys.cryptoservices.BCCryptoService
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey

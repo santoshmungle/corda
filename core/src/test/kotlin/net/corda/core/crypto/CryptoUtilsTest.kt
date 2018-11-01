@@ -934,25 +934,6 @@ class CryptoUtilsTest {
         this.outputStream.close()
     }
 
-    @Test
-    fun testBCSigner() {
-        Crypto.registerProviders()
-        val message = "Hello".toByteArray()
-        val (priv, pub) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val contentSignerForCert = PlatformContentSigner(priv)
-
-        val x509Cert = createCert(contentSignerForCert, KeyPair(pub, priv))
-        // Check if cert.verify() succeeds.
-        x509Cert.verify(pub)
-
-        // Each ContentSigner is used to sign one message, so we need another one;
-        // we don't want to use the same outputStream.
-        val contentSignerForMessage = PlatformContentSigner(priv)
-        contentSignerForMessage.write(message)
-        val sig = contentSignerForMessage.signature
-        assertTrue { Crypto.doVerify(pub, sig, message) }
-    }
-
     private fun createCert(signer: ContentSigner, keyPair: KeyPair): X509Certificate {
         val dname = X500Name("CN=TestEntity")
         val startDate = Calendar.getInstance().let { cal ->

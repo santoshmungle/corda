@@ -11,8 +11,8 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.cryptoservice.CryptoService
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.node.services.keys.cryptoServices.BCCryptoService
-import net.corda.node.services.keys.cryptoServices.SupportedCryptoServices
+import net.corda.node.services.keys.cryptoservices.BCCryptoService
+import net.corda.node.services.keys.cryptoservices.SupportedCryptoServices
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.nodeapi.internal.config.*
@@ -76,6 +76,8 @@ interface NodeConfiguration {
 
     val baseDirectory: Path
     val certificatesDirectory: Path
+    // signingCertificateStore is used to store certificate chains.
+    // However, BCCryptoService is reusing this to store keys as well.
     val signingCertificateStore: FileBasedCertificateStoreSupplier
     val p2pSslOptions: MutualSslConfiguration
 
@@ -108,11 +110,10 @@ interface NodeConfiguration {
         val defaultJmxReporterType = JmxReporterType.JOLOKIA
     }
 
-    // TODO remove this when we use classname instead of cryptoServiceName enum.
     fun makeCryptoService(): CryptoService {
         return when(cryptoServiceName) {
             SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this)
-            null -> BCCryptoService(this) // Pick default BC CryptoService when null.
+            null -> BCCryptoService(this) // Pick default BCCryptoService when null.
         }
     }
 }
@@ -296,9 +297,6 @@ data class NodeConfigurationImpl(
 
     private fun validateCryptoService(): List<String> {
         val errors = mutableListOf<String>()
-        if (cryptoServiceName != null) {
-            errors += "cryptoServiceName $cryptoServiceName is not supported"
-        }
         if (cryptoServiceName == null && cryptoServiceConf != null) {
             errors += "cryptoServiceName is null, but cryptoServiceConf is set to $cryptoServiceConf"
         }

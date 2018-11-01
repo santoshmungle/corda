@@ -1,9 +1,10 @@
-package net.corda.node.services.keys.cryptoServices
+package net.corda.node.services.keys.cryptoservices
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.newSecureRandom
 import net.corda.cryptoservice.CryptoService
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.operator.ContentSigner
@@ -13,15 +14,14 @@ import java.security.PublicKey
 
 /**
  * Basic implementation of a [CryptoService] that uses BouncyCastle for cryptographic operations
- * and a Java KeyStore to store private keys.
+ * and a Java KeyStore to store private keys. BCCryptoService reuses the [NodeConfiguration.signingCertificateStore] to
+ * store keys.
  */
 class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
 
     // TODO check if keyStore exists.
-    // TODO make it work with nodeConf.cryptoServiceConf (if it exists). I.e., read the signingCertificateStore
-    //      keyStore file name from there.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
-    internal var certificateStore = nodeConf.signingCertificateStore.get(true)
+    internal var certificateStore: CertificateStore = nodeConf.signingCertificateStore.get(true)
 
     override fun generateKeyPair(alias: String, schemeNumberID: Int): PublicKey {
         val keyPair = Crypto.generateKeyPair(Crypto.findSignatureScheme(schemeNumberID))

@@ -3,7 +3,6 @@ package net.corda.core.crypto
 import net.corda.core.KeepForDJVM
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.serialization.CordaSerializable
-import java.security.PrivateKey
 import java.security.PublicKey
 
 @KeepForDJVM

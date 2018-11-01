@@ -12,26 +12,27 @@ interface CryptoService {
      * and their corresponding signature schemes. The main reason for using schemeNumberID and not algorithm OIDs is
      * because some schemes might not be standardised and thus an official OID might for this scheme not exist yet.
      *
-     * @return the [PublicKey] of the generated [KeyPair].
+     * Returns the [PublicKey] of the generated [KeyPair].
      */
     fun generateKeyPair(alias: String, schemeNumberID: Int): PublicKey
 
-    /** Check if this [CryptoService] has a private key record for the input alias. */
+    /** Check if this [CryptoService] has a private key entry for the input alias. */
     fun containsKey(alias: String): Boolean
 
     /**
-     * @return [PublicKey] of the input alias or null if it doesn't exist.
+     * Returns the [PublicKey] of the input alias or null if it doesn't exist.
      */
     fun getPublicKey(alias: String): PublicKey?
 
     /**
      * Sign a [ByteArray] using the private key identified by the input alias.
-     * @return the signature bytes.
+     * @return the signature bytes whose format depends on the underlying signature scheme and it should
+     * be Java BouncyCastle compatible (i.e., ASN.1 DER-encoded for ECDSA).
      */
     fun sign(alias: String, data: ByteArray): ByteArray
 
     /**
-     * @return [ContentSigner] for the key identified by the input alias.
+     * Returns [ContentSigner] for the key identified by the input alias.
      */
     fun getSigner(alias: String): ContentSigner
 }

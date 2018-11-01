@@ -59,7 +59,7 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.node.services.keys.cryptoServices.BCCryptoService
+import net.corda.node.services.keys.cryptoservices.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
@@ -264,8 +264,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun initKeyStores(): X509Certificate {
         if (configuration.devMode) {
-            // TODO use CryptoService in devMode as well, at the moment we reuse the signingCertificateStore to generate dev keys.
             configuration.configureWithDevSSLCertificate()
+            // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
+            // we should re-synchronise BCCryptoService with the updated keystore file.
             if (cryptoService is BCCryptoService) {
                 cryptoService.resyncKeystore()
             }
@@ -800,7 +801,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * Loads or generates the node's legal identity and key-pair.
      * Note that obtainIdentity returns a KeyPair with an [AliasPrivateKey].
      */
-    /** Loads or generates the node's legal identity and key-pair. */
     private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
         val privateKeyAlias = "$NODE_IDENTITY_ALIAS_PREFIX-private-key"
 
