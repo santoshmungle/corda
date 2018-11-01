@@ -307,7 +307,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Node starting up ...")
 
         val trustRoot = initKeyStores()
-        val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         initialiseJVMAgents()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -333,6 +332,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity()
+        val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
@@ -857,7 +857,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun storeLegalIdentity(alias: String): PartyAndCertificate {
         val legalIdentityPublicKey = generateKeyPair(alias)
-        val nodeCaSigner = cryptoService.getSigner(X509Utilities.CORDA_CLIENT_CA)
         val signingCertificateStore = configuration.signingCertificateStore.get()
 
         val nodeCaCertPath = signingCertificateStore.value.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
@@ -867,7 +866,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 CertificateType.LEGAL_IDENTITY,
                 nodeCaCert.subjectX500Principal,
                 nodeCaCert.publicKey,
-                nodeCaSigner,
+                cryptoService.getSigner(X509Utilities.CORDA_CLIENT_CA),
                 nodeCaCert.subjectX500Principal,
                 legalIdentityPublicKey,
                 // TODO this might be smaller than DEFAULT_VALIDITY_WINDOW, shall we strictly apply DEFAULT_VALIDITY_WINDOW?
